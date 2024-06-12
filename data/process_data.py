@@ -4,6 +4,16 @@ from sqlalchemy import create_engine
 
 
 def load_data(messages_filepath, categories_filepath):
+    """
+    Load and merge messages and categories datasets.
+    
+    Args:
+    messages_filepath (str): The file path for the messages dataset.
+    categories_filepath (str): The file path for the categories dataset.
+    
+    Returns:
+    pd.DataFrame: A dataframe merging messages and categories on 'id'.
+    """
     messages = pd.read_csv(messages_filepath)
     categories = pd.read_csv(categories_filepath)
     df = pd.merge(messages, categories, on='id')
@@ -11,6 +21,16 @@ def load_data(messages_filepath, categories_filepath):
 
 
 def clean_data(df):
+    """
+    Clean dataframe by splitting 'categories' into separate category columns,
+    converting category values to binary (0 or 1), and removing duplicates.
+    
+    Args:
+    df (pd.DataFrame): The dataframe to clean.
+    
+    Returns:
+    pd.DataFrame: The cleaned dataframe.
+    """
     # Split categories into separate category columns
     categories = df['categories'].str.split(';', expand=True)
     
@@ -40,12 +60,23 @@ def clean_data(df):
 
 
 def save_data(df, database_filename):
+    """
+    Save the cleaned data to an SQLite database.
+    
+    Args:
+    df (pd.DataFrame): The dataframe to save.
+    database_filename (str): The file path of the SQLite database.
+    """
     engine = create_engine(f'sqlite:///{database_filename}')
     df.to_sql('CleanedData', engine, index=False, if_exists='replace')
 
 
 
 def main():
+    """
+    Main function to run the ETL processes: load data, clean data, and save data.
+    Utilizes command line arguments to specify file paths.
+    """
     if len(sys.argv) == 4:
 
         messages_filepath, categories_filepath, database_filepath = sys.argv[1:]

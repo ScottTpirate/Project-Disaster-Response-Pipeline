@@ -16,6 +16,15 @@ from sklearn.model_selection import train_test_split
 
 
 def load_data(database_filepath):
+    """
+    Load data from SQLite database.
+
+    Args:
+        database_filepath (str): Path to SQLite database.
+
+    Returns:
+        tuple: Contains X (feature set), Y (labels), and category names.
+    """
     engine = create_engine(f'sqlite:///{database_filepath}')
     df = pd.read_sql_table('CleanedData', engine)
     X = df['message']
@@ -25,6 +34,15 @@ def load_data(database_filepath):
 
 
 def tokenize(text):
+    """
+    Tokenize text data.
+
+    Args:
+        text (str): Message text to be tokenized.
+
+    Returns:
+        list: List of cleaned tokens from the input text.
+    """
     # Normalize text
     text = text.lower()
     # Tokenize text
@@ -42,6 +60,12 @@ def tokenize(text):
 
 
 def build_model():
+    """
+    Build a machine learning pipeline and apply GridSearchCV to optimize parameters.
+
+    Returns:
+        GridSearchCV: Grid search model object with pipeline.
+    """
     pipeline = Pipeline([
         ('tfidf', TfidfVectorizer(tokenizer=tokenize, token_pattern=None)),
         ('clf', MultiOutputClassifier(RandomForestClassifier()))
@@ -59,6 +83,15 @@ def build_model():
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
+    """
+    Evaluate the model performance by predicting on the test set and printing out classification reports.
+
+    Args:
+        model (GridSearchCV): The trained model.
+        X_test (DataFrame): Test features.
+        Y_test (DataFrame): Test labels.
+        category_names (list): List of category names.
+    """
     Y_pred = model.predict(X_test)
     for i in range(len(category_names)):
         print('Category:', category_names[i])
@@ -66,11 +99,22 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
 
 def save_model(model, model_filepath):
+    """
+    Save the trained model to a Python pickle file.
+
+    Args:
+        model (GridSearchCV): The trained model.
+        model_filepath (str): Path where the pickle file will be saved.
+    """
     with open(model_filepath, 'wb') as file:
         pickle.dump(model, file)
 
 
 def main():
+    """
+    Main function to run the ML pipeline that loads data, trains model, evaluates model, and saves model.
+    Uses command line arguments to specify the database and model file paths.
+    """
     if len(sys.argv) == 3:
         database_filepath, model_filepath = sys.argv[1:]
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))

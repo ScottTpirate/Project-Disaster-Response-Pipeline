@@ -15,6 +15,15 @@ from sqlalchemy import create_engine
 app = Flask(__name__)
 
 def tokenize(text):
+    """
+    Tokenize text using NLTK's word_tokenize and lemmatize each token.
+
+    Args:
+        text (str): Text to be tokenized.
+
+    Returns:
+        list: List of lemmatized lowercase tokens.
+    """
     tokens = word_tokenize(text)
     lemmatizer = WordNetLemmatizer()
 
@@ -37,6 +46,12 @@ model = joblib.load("../models/your_model_name.pkl")
 @app.route('/')
 @app.route('/index')
 def index():
+    """
+    Render the main page of the web app with data visualizations.
+
+    Returns:
+        str: Rendered HTML page including visualizations of message data.
+    """
     # Extract data for the visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
@@ -96,6 +111,12 @@ def index():
 # web page that handles user query and displays model results
 @app.route('/go')
 def go():
+    """
+    Handle user query and display model results.
+
+    Returns:
+        str: Rendered HTML page showing the classification results for user query.
+    """
     # save user input in query
     query = request.args.get('query', '') 
 
@@ -112,6 +133,9 @@ def go():
 
 
 def main():
+    """
+    Run the Flask app.
+    """
     app.run(host='0.0.0.0', port=3000, debug=True)
 
 
