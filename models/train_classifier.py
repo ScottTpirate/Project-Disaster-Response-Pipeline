@@ -1,24 +1,73 @@
 import sys
+import pickle
+import nltk
+import pandas as pd
+from sqlalchemy import create_engine
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from sklearn.pipeline import Pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
+
 
 
 def load_data(database_filepath):
-    pass
+    engine = create_engine(f'sqlite:///{database_filepath}')
+    df = pd.read_sql_table('CleanedData', engine)
+    X = df['message']
+    Y = df.drop(['id', 'message', 'original', 'genre'], axis=1)
+    category_names = Y.columns
+    return X, Y, category_names
 
 
 def tokenize(text):
-    pass
+    # Normalize text
+    text = text.lower()
+    # Tokenize text
+    tokens = word_tokenize(text)
+    # Initialize lemmatizer
+    lemmatizer = WordNetLemmatizer()
+    
+    clean_tokens = []
+    for tok in tokens:
+        # Lemmatize, normalize case, and remove leading/trailing white space
+        clean_tok = lemmatizer.lemmatize(tok).strip()
+        clean_tokens.append(clean_tok)
+    
+    return clean_tokens
 
 
 def build_model():
-    pass
+    pipeline = Pipeline([
+        ('tfidf', TfidfVectorizer(tokenizer=tokenize, token_pattern=None)),
+        ('clf', MultiOutputClassifier(RandomForestClassifier()))
+    ])
+    
+    parameters = {
+        'tfidf__ngram_range': [(1, 1), (1, 2)],
+        'clf__estimator__n_estimators': [50, 100],
+        'clf__estimator__min_samples_split': [2, 4]
+    }
+
+    model = GridSearchCV(pipeline, param_grid=parameters)
+    
+    return model
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
+    Y_pred = model.predict(X_test)
+    for i in range(len(category_names)):
+        print('Category:', category_names[i])
+        print(classification_report(Y_test.iloc[:, i], Y_pred[:, i]))
 
 
 def save_model(model, model_filepath):
-    pass
+    with open(model_filepath, 'wb') as file:
+        pickle.dump(model, file)
 
 
 def main():

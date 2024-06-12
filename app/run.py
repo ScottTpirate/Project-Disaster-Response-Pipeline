@@ -37,40 +37,59 @@ model = joblib.load("../models/your_model_name.pkl")
 @app.route('/')
 @app.route('/index')
 def index():
-    
-    # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
+    # Extract data for the visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
     
+    # Example for additional visual: Category Distribution
+    category_counts = df.iloc[:, 4:].sum().sort_values(ascending=False)
+    category_names = list(category_counts.index)
+    
+    # Example for additional visual: Message Length by Genre
+    df['message_length'] = df['message'].apply(len)
+    message_lengths = df.groupby('genre')['message_length'].apply(list)
+    genre_list = list(message_lengths.index)
+
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
     graphs = [
         {
             'data': [
-                Bar(
-                    x=genre_names,
-                    y=genre_counts
-                )
+                Bar(x=genre_names, y=genre_counts)
             ],
-
             'layout': {
                 'title': 'Distribution of Message Genres',
-                'yaxis': {
-                    'title': "Count"
-                },
-                'xaxis': {
-                    'title': "Genre"
-                }
+                'yaxis': {'title': "Count"},
+                'xaxis': {'title': "Genre"}
+            }
+        },
+        {
+            'data': [
+                Bar(x=category_names, y=category_counts)
+            ],
+            'layout': {
+                'title': 'Distribution of Message Categories',
+                'yaxis': {'title': "Count"},
+                'xaxis': {'title': "Category"}
+            }
+        },
+        {
+            'data': [
+                {'x': genre_list, 'y': message_lengths[genre], 'type': 'box', 'name': genre}
+                for genre in genre_list
+            ],
+            'layout': {
+                'title': 'Message Length Distribution by Genre',
+                'yaxis': {'title': "Length of Messages"},
+                'xaxis': {'title': "Genre"}
             }
         }
     ]
     
-    # encode plotly graphs in JSON
+    # Encode plotly graphs in JSON
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
     
-    # render web page with plotly graphs
+    # Render web page with plotly graphs
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
 
 
