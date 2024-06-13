@@ -3,7 +3,10 @@ import plotly
 import joblib
 import nltk
 import pandas as pd
-
+from collections import Counter
+import itertools
+import numpy as np
+from textblob import TextBlob
 
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
@@ -11,7 +14,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 from flask import Flask
 from flask import render_template, request, jsonify
-from plotly.graph_objs import Bar
+from plotly.graph_objs import Bar, Box, Histogram, Scatter, Pie
 from sqlalchemy import create_engine
 
 
@@ -75,59 +78,57 @@ def index():
     Returns:
         str: Rendered HTML page including visualizations of message data.
     """
-    # Extract data for the visuals
-    genre_counts = df.groupby('genre').count()['message']
-    genre_names = list(genre_counts.index)
-    
-    # Example for additional visual: Category Distribution
-    category_counts = df.iloc[:, 4:].sum().sort_values(ascending=False)
-    category_names = list(category_counts.index)
-    
-    # Example for additional visual: Message Length by Genre
-    df['message_length'] = df['message'].apply(len)
-    message_lengths = df.groupby('genre')['message_length'].apply(list)
-    genre_list = list(message_lengths.index)
+    # Prepare data for visualizations
+    request_types = df[['request', 'offer']].sum()
+    request_type_names = ['Request', 'Offer']
 
-    # create visuals
+    aid_related = df[['food', 'water', 'shelter']]
+    aid_related_totals = aid_related.sum().tolist()
+    aid_related_names = ['Food', 'Water', 'Shelter']
+    
+    # Ensure only numeric columns are included in the sum
+    numeric_cols = df.select_dtypes(include=[np.number]).drop(['id', 'related', 'aid_related', 'request', 'offer', 'direct_report'], axis=1)  # Select only numeric columns and drop unintesting ones
+    feature_sums = numeric_cols.sum().sort_values(ascending=False)  # Sum and sort numeric columns
+
+
+    # Graphs list
     graphs = [
         {
             'data': [
-                Bar(x=genre_names, y=genre_counts)
+                Bar(x=aid_related_names, y=aid_related_totals,
+                       text=aid_related_totals, textposition='auto',
+                       marker=dict(color=['#FFD700', '#9EA0A1', '#CD7F32']))
             ],
             'layout': {
-                'title': 'Distribution of Message Genres',
+                'title': 'Messages by Aid Related',
                 'yaxis': {'title': "Count"},
-                'xaxis': {'title': "Genre"}
+                'xaxis': {'title': "Aid Type"}
             }
         },
         {
             'data': [
-                Bar(x=category_names, y=category_counts)
+                Pie(labels=feature_sums.index, values=feature_sums.values, hole=.3, 
+                       hoverinfo='label+percent', textinfo='value')
             ],
             'layout': {
-                'title': 'Distribution of Message Categories',
-                'yaxis': {'title': "Count"},
-                'xaxis': {'title': "Category"}
+                'title': 'Overview of All Features'
             }
         },
         {
             'data': [
-                {'x': genre_list, 'y': message_lengths[genre], 'type': 'box', 'name': genre}
-                for genre in genre_list
+                Pie(labels=request_type_names, values=request_types.tolist(), hole=.3)
             ],
             'layout': {
-                'title': 'Message Length Distribution by Genre',
-                'yaxis': {'title': "Length of Messages"},
-                'xaxis': {'title': "Genre"}
+                'title': 'Distribution of Requests and Offers'
             }
         }
     ]
-    
-    # Encode plotly graphs in JSON
+
+    # Encode the graphs for use in the HTML template
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
-    
-    # Render web page with plotly graphs
+
+    # Render the HTML template, passing data and IDs for graphs
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
 
 
