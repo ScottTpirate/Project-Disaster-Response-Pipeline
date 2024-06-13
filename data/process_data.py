@@ -31,6 +31,12 @@ def clean_data(df):
     Returns:
     pd.DataFrame: The cleaned dataframe.
     """
+    # Check for any NaNs in the DataFrame
+    if df.isnull().any().any():
+        # Handle NaNs by dropping them
+        df.dropna(inplace=True)
+
+    
     # Split categories into separate category columns
     categories = df['categories'].str.split(';', expand=True)
     
@@ -50,11 +56,13 @@ def clean_data(df):
     # Drop the original categories column from 'df'
     df.drop('categories', axis=1, inplace=True)
     
-    # Concatenate the original dataframe with the new 'categories' dataframe
-    df = pd.concat([df, categories], axis=1)
+    # Avoid adding duplicate columns
+    df = pd.concat([df.drop(columns=categories.columns, errors='ignore'), categories], axis=1)
+
     
-    # Drop duplicates
-    df = df.drop_duplicates()
+    # Drop duplicates more precisely
+    df.drop_duplicates(subset=['id'] + list(categories.columns), inplace=True)
+
     
     return df
 
