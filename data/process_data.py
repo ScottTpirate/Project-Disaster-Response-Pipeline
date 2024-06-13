@@ -36,31 +36,37 @@ def clean_data(df):
         # Handle NaNs by dropping them
         df.dropna(inplace=True)
 
-    
     # Split categories into separate category columns
     categories = df['categories'].str.split(';', expand=True)
-    
+
     # Use first row to extract a list of new column names for categories
     row = categories.iloc[0]
     category_colnames = row.apply(lambda x: x.split('-')[0])
     categories.columns = category_colnames
-    
+
     # Convert category values to just numbers 0 or 1
     for column in categories:
         # Set each value to be the last character of the string
-        categories[column] = categories[column].str[-1]
-        
-        # Convert column from string to numeric
-        categories[column] = pd.to_numeric(categories[column])
+        categories[column] = categories[column].str.split('-').str[1]
+
+    # Convert column from string to numeric
+    categories = categories.apply(pd.to_numeric)
+
+    # Validate that all values are either 0 or 1
+    # Create a mask that is True for rows where all values are 0 or 1
+    valid_rows = categories.apply(lambda x: x.isin([0, 1])).all(axis=1)
+
+    # Filter the DataFrame to only include valid rows
+    df = df[valid_rows]
     
     # Drop the original categories column from 'df'
     df.drop('categories', axis=1, inplace=True)
-    
+
+    # Concatenate the original dataframe with the new 'categories' dataframe
     # Avoid adding duplicate columns
     df = pd.concat([df.drop(columns=categories.columns, errors='ignore'), categories], axis=1)
 
-    
-    # Drop duplicates more precisely
+    # Drop duplicates more precisely based on 'id' and all category columns
     df.drop_duplicates(subset=['id'] + list(categories.columns), inplace=True)
 
     
